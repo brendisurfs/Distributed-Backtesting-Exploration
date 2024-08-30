@@ -1,18 +1,25 @@
 use std::{
-    fs, io,
-    process::{self, Command, Stdio},
+    fs,
+    process::{self, Stdio},
 };
 
+use indicatif::{ProgressBar, ProgressStyle};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 fn main() {
-    let mut paths = read_csv_paths("/Users/brendi/Sync/OHLCData/Stocks/30min", None);
-    paths.truncate(10);
+    let paths = read_csv_paths("/Users/brendi/Sync/OHLCData/Stocks/30min", None);
 
     let tp = rayon::ThreadPoolBuilder::new()
-        .num_threads(4)
+        .num_threads(6)
         .build()
         .unwrap();
+    let pb = ProgressBar::new(paths.len() as u64).with_message("none");
+    let sty = ProgressStyle::with_template(
+        "[{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} processing: {msg}",
+    )
+    .unwrap()
+    .progress_chars("##-");
+    pb.set_style(sty.clone());
 
     let vec_of_responses = tp.install(|| {
         let responses = paths
@@ -22,23 +29,27 @@ fn main() {
                 let proc = process::Command::new("just")
                     .arg("run")
                     .arg(&p)
-                    .arg("1")
-                    .arg("10")
-                    .arg("1.0")
+                    .arg("3")
+                    .arg("12")
+                    .arg("8.0")
                     .stdout(Stdio::piped())
                     .stderr(Stdio::piped())
                     .output()
                     .unwrap();
 
                 let out = String::from_utf8(proc.stdout).unwrap();
-                println!("ticker: {ticker}");
-                print!("\x1B[A\x1B[K");
+                // println!("ticker: {ticker}");
+                // print!("\x1B[A\x1B[K");
+                pb.set_message(ticker);
+                pb.inc(1);
                 out
             })
             .filter(|o| !o.is_empty())
             .collect::<Vec<_>>();
         responses
     });
+
+    pb.finish();
 
     // write to a csv file
     write_to_csv(vec_of_responses).unwrap();
