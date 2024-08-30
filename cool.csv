@@ -1,0 +1,3 @@
+ticker,start_equity,end_equity,num_years,total_plpc,avg_plpc,avg_vol
+CABO,100000.0,143250.0000,8.0,43.2500,5.4062,1865.5067
+XBIO,100000.0,260992.3008,7.0,160.9923,22.9989,4766.8209
