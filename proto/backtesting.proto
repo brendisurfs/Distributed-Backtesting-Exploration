@@ -37,10 +37,17 @@ message JobsReply {
 
 
 service Processor {
+    rpc CompleteJob(CompleteRequest) returns(CompleteReply);
     rpc SendStatus(StatusRequest) returns(StatusReply);
     rpc RequestJobs(JobsRequest)  returns (JobsReply);
 }
 
+message CompleteRequest {
+    string id = 1;
+    string data = 2;
+}
+
+message CompleteReply {}
 
 message StatusRequest {
     WorkerStatus status = 1;

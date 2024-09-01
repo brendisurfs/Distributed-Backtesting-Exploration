@@ -1,19 +1,18 @@
 use std::{
     collections::HashMap,
-    default, fs,
     net::SocketAddr,
     sync::{Arc, Mutex, MutexGuard},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use hello_world::{
     processor_server::{Processor, ProcessorServer},
-    Job, JobsReply, JobsRequest, StatusReply, StatusRequest, WorkerStatus,
+    CompleteReply, CompleteRequest, Job, JobsReply, JobsRequest, StatusReply, StatusRequest,
+    WorkerStatus,
 };
 use time::OffsetDateTime;
 use tonic::{codec::CompressionEncoding, transport::Server, Code, Request, Response, Status};
-use tracing::{debug, info, warn};
-use tracing_subscriber::util::SubscriberInitExt;
+use tracing::info;
 use uuid::Uuid;
 
 pub mod hello_world {
@@ -52,8 +51,7 @@ impl Dispatcher {
                     }
                 }
             };
-
-            std::thread::sleep(Duration::from_secs(1));
+            std::thread::sleep(Duration::from_millis(100));
         });
 
         let jobs_completed = Mutex::new(HashMap::new());
@@ -68,21 +66,48 @@ impl Dispatcher {
 
 #[tonic::async_trait]
 impl Processor for Dispatcher {
+    async fn complete_job(
+        &self,
+        req: Request<CompleteRequest>,
+    ) -> Result<Response<CompleteReply>, Status> {
+        let addr = req.local_addr();
+        let id = req.into_inner().id;
+        let mut lock = self.jobs_completed.lock().unwrap();
+        info!("Job {id} Completed");
+        lock.insert(id, true);
+        Ok(Response::new(CompleteReply {}))
+    }
     // receive the status from a worker
     async fn send_status(
         &self,
         req: Request<StatusRequest>,
     ) -> Result<Response<StatusReply>, Status> {
-        let addr = req.remote_addr();
+        let addr = req.local_addr();
         let status = req.into_inner().status();
 
-        let prev_status = {
-            let lock = self.peers.lock().unwrap();
-            let peer = lock.get(&addr.unwrap()).unwrap();
-            peer.status
-        };
-        if prev_status != status {
-            tracing::info!("Status Update: addr={addr:?} status={status:?}");
+        if let Some(addr) = addr {
+            let mut lock = self.peers.lock().unwrap();
+            let some_peer = lock.get_mut(&addr);
+            if let Some(peer) = some_peer {
+                if peer.status != status {
+                    tracing::info!("Status Update: addr={addr:?} status={status:?}");
+                }
+                peer.status = status;
+            }
+        } else {
+            // let mut peers = self.peers.lock().unwrap();
+            // let last_connection = time::OffsetDateTime::now_utc().unix_timestamp();
+            //
+            // let new_peer = Peer {
+            //     status: WorkerStatus::Idle,
+            //     last_connection,
+            //     addr,
+            // };
+            //
+            // let last_insert = peers.insert(addr, new_peer);
+            // if last_insert.is_none() {
+            //     tracing::info!("New Peer added -> {addr:?} cores: {num_cores}");
+            // }
         }
 
         Ok(Response::new(StatusReply {}))
@@ -119,7 +144,7 @@ impl Processor for Dispatcher {
 
         if let Some(some_files) = files {
             let jobs = convert_files_to_jobs(some_files);
-            info!("Num jobs: {}", jobs.len());
+            info!("Num files to run: {}", jobs.len());
             let res = JobsReply { jobs };
             return Ok(Response::new(res));
         }
@@ -145,8 +170,12 @@ fn convert_files_to_jobs(files: Vec<String>) -> Vec<Job> {
     files
         .iter()
         .map(|p| {
+            let now = Instant::now();
             let id = Uuid::new_v4().to_string();
             let file = std::fs::read(p).unwrap();
+            let finish = Instant::now();
+            let dur = finish.duration_since(now);
+            println!("Duration: {dur:?}");
             Job { id, file }
         })
         .collect::<Vec<_>>()
@@ -156,10 +185,9 @@ fn convert_files_to_jobs(files: Vec<String>) -> Vec<Job> {
 fn did_fail_checkin(timestamp: i64) -> bool {
     let now = OffsetDateTime::now_utc();
     let last_check = OffsetDateTime::from_unix_timestamp(timestamp).unwrap();
-
     let delta = now - last_check;
 
-    delta.whole_minutes() > 1
+    delta.whole_seconds() > 10
 }
 
 #[tokio::main]

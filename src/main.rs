@@ -27,19 +27,17 @@ fn main() {
             .map(|p| {
                 let ticker = ticker_from_path(&p);
                 let proc = process::Command::new("just")
-                    .arg("run")
+                    .arg("run-proc")
                     .arg(&p)
-                    .arg("3")
-                    .arg("12")
-                    .arg("8.0")
+                    .arg("0")
+                    .arg("10")
+                    .arg("0.0")
                     .stdout(Stdio::piped())
                     .stderr(Stdio::piped())
                     .output()
                     .unwrap();
 
                 let out = String::from_utf8(proc.stdout).unwrap();
-                // println!("ticker: {ticker}");
-                // print!("\x1B[A\x1B[K");
                 pb.set_message(ticker);
                 pb.inc(1);
                 out
