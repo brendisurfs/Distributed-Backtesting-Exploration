@@ -21,7 +21,6 @@ pub mod hello_world {
 
 #[derive(Debug, Clone)]
 struct Peer {
-    addr: SocketAddr,
     status: WorkerStatus,
     last_connection: i64,
 }
@@ -70,9 +69,11 @@ impl Processor for Dispatcher {
         &self,
         req: Request<CompleteRequest>,
     ) -> Result<Response<CompleteReply>, Status> {
-        let addr = req.local_addr();
         let id = req.into_inner().id;
-        let mut lock = self.jobs_completed.lock().unwrap();
+        let Ok(mut lock) = self.jobs_completed.lock() else {
+            return Err(Status::internal("Unable to obtain lock"));
+        };
+
         info!("Job {id} Completed");
         lock.insert(id, true);
         Ok(Response::new(CompleteReply {}))
@@ -86,7 +87,10 @@ impl Processor for Dispatcher {
         let status = req.into_inner().status();
 
         if let Some(addr) = addr {
-            let mut lock = self.peers.lock().unwrap();
+            let Ok(mut lock) = self.peers.lock() else {
+                return Err(Status::internal("Unable to obtain lock"));
+            };
+
             let some_peer = lock.get_mut(&addr);
             if let Some(peer) = some_peer {
                 if peer.status != status {
@@ -94,20 +98,6 @@ impl Processor for Dispatcher {
                 }
                 peer.status = status;
             }
-        } else {
-            // let mut peers = self.peers.lock().unwrap();
-            // let last_connection = time::OffsetDateTime::now_utc().unix_timestamp();
-            //
-            // let new_peer = Peer {
-            //     status: WorkerStatus::Idle,
-            //     last_connection,
-            //     addr,
-            // };
-            //
-            // let last_insert = peers.insert(addr, new_peer);
-            // if last_insert.is_none() {
-            //     tracing::info!("New Peer added -> {addr:?} cores: {num_cores}");
-            // }
         }
 
         Ok(Response::new(StatusReply {}))
@@ -122,33 +112,40 @@ impl Processor for Dispatcher {
         let num_cores = request.into_inner().cores;
 
         if let Some(addr) = addr {
-            let mut peers = self.peers.lock().unwrap();
+            let Ok(mut peers) = self.peers.lock() else {
+                return Err(Status::internal("Unable to get peers mutex lock"));
+            };
+
             let last_connection = time::OffsetDateTime::now_utc().unix_timestamp();
 
             let new_peer = Peer {
                 status: WorkerStatus::Idle,
                 last_connection,
-                addr,
             };
 
             let last_insert = peers.insert(addr, new_peer);
+
             if last_insert.is_none() {
                 tracing::info!("New Peer added -> {addr:?} cores: {num_cores}");
             }
         }
 
         let files = {
-            let mut lock = self.files.lock().unwrap();
+            let Ok(mut lock) = self.files.lock() else {
+                return Err(Status::internal("Unable to obtain lock for files"));
+            };
+
             split_off_n_jobs(&mut lock, num_cores as usize)
         };
 
-        if let Some(some_files) = files {
-            let jobs = convert_files_to_jobs(some_files);
-            info!("Num files to run: {}", jobs.len());
-            let res = JobsReply { jobs };
-            return Ok(Response::new(res));
-        }
-        return Err(Status::new(Code::Ok, "No more jobs available"));
+        let Some(some_files) = files else {
+            return Err(Status::new(Code::Ok, "No more jobs available"));
+        };
+
+        let jobs = convert_files_to_jobs(some_files);
+        info!("Num files to run: {}", jobs.len());
+
+        return Ok(Response::new(JobsReply { jobs }));
     }
 }
 
@@ -172,12 +169,17 @@ fn convert_files_to_jobs(files: Vec<String>) -> Vec<Job> {
         .map(|p| {
             let now = Instant::now();
             let id = Uuid::new_v4().to_string();
-            let file = std::fs::read(p).unwrap();
+            let Ok(file) = std::fs::read(p) else {
+                return None;
+            };
             let finish = Instant::now();
             let dur = finish.duration_since(now);
             println!("Duration: {dur:?}");
-            Job { id, file }
+
+            Some(Job { id, file })
         })
+        .filter(Option::is_some)
+        .map(Option::unwrap)
         .collect::<Vec<_>>()
 }
 

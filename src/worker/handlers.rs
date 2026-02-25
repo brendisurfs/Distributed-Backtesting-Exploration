@@ -1,4 +1,4 @@
-use std::sync::atomic::Ordering;
+use std::{error::Error, sync::atomic::Ordering};
 
 use flume::Sender;
 use tonic::transport::Channel;
@@ -10,8 +10,14 @@ use crate::{
     CONNECTED, PROC_FLAG,
 };
 
+/// send_status
+/// Sends the status of the current processor.
 pub async fn send_status(client: &mut ProcessorClient<Channel>) {
-    let processing_flag = PROC_FLAG.get().unwrap();
+    let Some(processing_flag) = PROC_FLAG.get() else {
+        tracing::error!("Unable to retrieve PROC_FLAG OnceLock");
+        return;
+    };
+
     let is_proc = processing_flag.load(Ordering::SeqCst);
 
     if is_proc {
@@ -19,7 +25,10 @@ pub async fn send_status(client: &mut ProcessorClient<Channel>) {
             status: WorkerStatus::Running.into(),
         };
 
-        client.send_status(status).await.unwrap();
+        let _ = client
+            .send_status(status)
+            .await
+            .inspect_err(|why| tracing::error!("{why:?}"));
     }
 }
 
@@ -31,10 +40,14 @@ pub async fn handle_job(client: &mut ProcessorClient<Channel>, reply_send: Sende
     };
 
     if let Err(why) = client.send_status(req).await {
-        let conn_status = CONNECTED.get().unwrap();
-        let is_conn = conn_status.load(Ordering::SeqCst);
-        if is_conn {
-            tracing::error!("{why:?}");
+        let Some(conn_status) = CONNECTED.get() else {
+            tracing::error!("Unable to retrive CONNECTED Atomic Bool");
+            return;
+        };
+
+        let is_connected = conn_status.load(Ordering::SeqCst);
+        if is_connected {
+            tracing::error!("Unable to send status: {:?}", why.source());
         }
         conn_status.store(false, Ordering::SeqCst);
     }
@@ -43,16 +56,10 @@ pub async fn handle_job(client: &mut ProcessorClient<Channel>, reply_send: Sende
         cores: cpu_count as i32,
     });
 
-    let response = client.request_jobs(request).await;
-    match response {
-        Ok(res) => {
-            reply_send
-                .send_async(res.into_inner())
-                .await
-                .expect("job sender to send");
-        }
-        Err(why) => {
-            // tracing::warn!("RESPONSE: {:?}", why);
-        }
-    }
+    if let Ok(response) = client.request_jobs(request).await {
+        let _ = reply_send
+            .send_async(response.into_inner())
+            .await
+            .inspect_err(|why| tracing::error!("{why:?}"));
+    };
 }

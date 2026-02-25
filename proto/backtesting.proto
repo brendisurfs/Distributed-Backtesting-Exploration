@@ -1,22 +1,6 @@
 syntax = "proto3";
 package backtesting;
 
-
-service Greeter {
-    rpc SayHello(HelloRequest) returns (HelloReply);
-}
-
-message HelloRequest {
-    // Request message contains the name to be greeted
-    string name = 1;
-}
-
-message HelloReply {
-    // Reply contains the greeting message
-    string message = 1;
-}
-
-
 message Job {
     string id = 1;
     bytes File = 2;

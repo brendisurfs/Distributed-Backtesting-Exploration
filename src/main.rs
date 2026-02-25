@@ -1,3 +1,4 @@
+mod utils;
 use std::{
     fs,
     process::{self, Stdio},
@@ -12,13 +13,16 @@ fn main() {
     let tp = rayon::ThreadPoolBuilder::new()
         .num_threads(6)
         .build()
-        .unwrap();
+        .expect("Thread pool to build");
+
     let pb = ProgressBar::new(paths.len() as u64).with_message("none");
+
     let sty = ProgressStyle::with_template(
         "[{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} processing: {msg}",
     )
-    .unwrap()
+    .expect("progress style template to parse")
     .progress_chars("##-");
+
     pb.set_style(sty.clone());
 
     let vec_of_responses = tp.install(|| {
