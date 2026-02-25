@@ -79,7 +79,7 @@ fn write_to_csv(results: Vec<String>) -> anyhow::Result<()> {
 
 pub fn ticker_from_path(path: &str) -> String {
     path.split('/')
-        .last()
+        .next_back()
         .unwrap()
         .split("_")
         .collect::<Vec<_>>()[0]

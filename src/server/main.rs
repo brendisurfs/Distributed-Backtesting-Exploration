@@ -166,27 +166,26 @@ fn split_off_n_jobs(lock: &mut MutexGuard<'_, Vec<String>>, n_jobs: usize) -> Op
 fn convert_files_to_jobs(files: Vec<String>) -> Vec<Job> {
     files
         .iter()
-        .map(|p| {
+        .filter_map(|file_path| {
             let now = Instant::now();
             let id = Uuid::new_v4().to_string();
-            let Ok(file) = std::fs::read(p) else {
+            let Ok(file) = std::fs::read(file_path) else {
                 return None;
             };
             let finish = Instant::now();
             let dur = finish.duration_since(now);
-            println!("Duration: {dur:?}");
+            tracing::info!("Duration: {dur:?}");
 
             Some(Job { id, file })
         })
-        .filter(Option::is_some)
-        .map(Option::unwrap)
         .collect::<Vec<_>>()
 }
 
 // checks if the peer is still active or not.
 fn did_fail_checkin(timestamp: i64) -> bool {
     let now = OffsetDateTime::now_utc();
-    let last_check = OffsetDateTime::from_unix_timestamp(timestamp).unwrap();
+    let last_check =
+        OffsetDateTime::from_unix_timestamp(timestamp).expect("timestamp to be a real time");
     let delta = now - last_check;
 
     delta.whole_seconds() > 10

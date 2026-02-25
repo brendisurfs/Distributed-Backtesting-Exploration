@@ -2,10 +2,7 @@ use std::{sync::atomic::Ordering, thread};
 
 use flume::Sender;
 
-use crate::{
-    hello_world::{Job, JobsReply},
-    ms, PROC_FLAG,
-};
+use crate::{hello_world::JobsReply, ms, PROC_FLAG};
 
 pub fn process_incoming_job(jobs_reply: JobsReply, complete_send: Sender<String>) {
     let proc_flag = PROC_FLAG.get().unwrap();
