@@ -22,7 +22,7 @@ tokio = { version = "1.39.3", features = ["full"] }
 tokio-stream = { version = "0.1.15", features = ["sync"] }
 tonic = { version = "0.12.2", features = ["codegen", "gzip"] }
 tracing = "0.1.40"
-tracing-subscriber = "0.3.18"
+tracing-subscriber = "0.3.20"
 uuid = { version = "1.10.0", features = ["v4"] }
 
 [build-dependencies]
