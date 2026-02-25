@@ -29,8 +29,8 @@ fn main() -> anyhow::Result<()> {
     PROC_FLAG.set(AtomicBool::new(false)).expect("PROC_FLAG to set");
     CONNECTED.set(AtomicBool::new(false)).expect("CONNECTED flag to be set");
 
-    let (reply_send, reply_recv) = flume::bounded::<JobsReply>(128);
-    let (complete_send, complete_recv) = flume::bounded::<String>(128);
+    let (reply_send, reply_recv) = flume::bounded::<JobsReply>(1024);
+    let (complete_send, complete_recv) = flume::bounded::<String>(1024);
 
     // Spawn a processor in a background OS thread.
     // Jobs in this project are set up to be compute heavy,
@@ -57,7 +57,11 @@ fn main() -> anyhow::Result<()> {
 
             tracing::info!("connected to server");
 
-            let con_flag = CONNECTED.get().unwrap();
+            let Some( con_flag ) = CONNECTED.get() else {
+                tracing::error!("CONNECTED flag not set");
+                return;
+            };
+
             con_flag.store(true, Ordering::SeqCst);
 
             // repeatedly call the server to let it know we want jobs.

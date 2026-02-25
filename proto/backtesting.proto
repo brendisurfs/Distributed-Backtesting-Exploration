@@ -1,11 +1,6 @@
 syntax = "proto3";
 package backtesting;
 
-message Job {
-    string id = 1;
-    bytes File = 2;
-}
-
 message JobsRequest {
     int32 cores = 1;
 }
@@ -13,6 +8,11 @@ message JobsRequest {
 enum WorkerStatus {
     IDLE  = 0;
     RUNNING = 1;
+}
+
+message Job {
+    string id = 1;
+    bytes File = 2;
 }
 
 message JobsReply {
