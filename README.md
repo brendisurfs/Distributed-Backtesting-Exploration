@@ -14,7 +14,7 @@ I chose to use OS threads for tasks because backtesting is CPU-bound.
 Running backtesting processes on Tokio threads would block executor threads and starve I/O.
 I decided to only use current_thread() for the worker, as gRPC polling is minimal and I/O bound. Using the full multi-threaded runtime is wasteful.
 
-I chose gRPC for this project because Protobufs serve as an enforced, typed contract between server and workers, keeping them in sync from one source of truth.
+I chose gRPC for this project because .proto files serve as an enforced, typed contract between server and workers, keeping them in sync from one source of truth.
 gRPC supports built-in compression, which significantly reduces payload size when transferring large OHLC CSV files as bytes.
 Workers report their CPU count so the server can batch jobs proportionally, giving higher-core machines more work.
 
