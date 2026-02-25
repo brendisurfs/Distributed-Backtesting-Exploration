@@ -3,12 +3,11 @@ use std::{error::Error, sync::atomic::Ordering};
 use flume::Sender;
 use tonic::transport::Channel;
 
-use crate::{
-    hello_world::{
-        processor_client::ProcessorClient, JobsReply, JobsRequest, StatusRequest, WorkerStatus,
-    },
-    CONNECTED, PROC_FLAG,
+use parallel_backtest::backtesting::{
+    processor_client::ProcessorClient, JobsReply, JobsRequest, StatusRequest, WorkerStatus,
 };
+
+use crate::{CONNECTED, PROC_FLAG};
 
 /// send_status
 /// Sends the status of the current processor.
@@ -41,7 +40,7 @@ pub async fn handle_job(client: &mut ProcessorClient<Channel>, reply_send: Sende
 
     if let Err(why) = client.send_status(req).await {
         let Some(conn_status) = CONNECTED.get() else {
-            tracing::error!("Unable to retrive CONNECTED Atomic Bool");
+            tracing::error!("CONNECTED has not bee initialized");
             return;
         };
 

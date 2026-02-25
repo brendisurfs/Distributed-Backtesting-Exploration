@@ -5,7 +5,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use hello_world::{
+use backtesting::{
     processor_server::{Processor, ProcessorServer},
     CompleteReply, CompleteRequest, Job, JobsReply, JobsRequest, StatusReply, StatusRequest,
     WorkerStatus,
@@ -15,9 +15,7 @@ use tonic::{codec::CompressionEncoding, transport::Server, Code, Request, Respon
 use tracing::info;
 use uuid::Uuid;
 
-pub mod hello_world {
-    tonic::include_proto!("backtesting");
-}
+pub use parallel_backtest::backtesting;
 
 #[derive(Debug, Clone)]
 struct Peer {

@@ -6,8 +6,8 @@ use std::sync::OnceLock;
 use std::time::Duration;
 
 use handlers::{handle_job, send_status};
-use hello_world::processor_client::ProcessorClient;
-use hello_world::{CompleteRequest, JobsReply};
+use backtesting::processor_client::ProcessorClient;
+use backtesting::{CompleteRequest, JobsReply};
 use process::process_incoming_job;
 use tokio::select;
 use tokio::time::interval;
@@ -15,9 +15,7 @@ use tokio_stream::wrappers::IntervalStream;
 use tokio_stream::StreamExt;
 use tonic::codec::CompressionEncoding;
 
-pub mod hello_world {
-    tonic::include_proto!("backtesting");
-}
+pub use parallel_backtest::backtesting;
 
 fn ms(millis: u64) -> Duration {
     Duration::from_millis(millis)
@@ -82,5 +80,6 @@ fn main() -> anyhow::Result<()> {
                 }
             }
         });
+
     Ok(())
 }
