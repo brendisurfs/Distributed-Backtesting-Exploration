@@ -1,6 +1,6 @@
 # Distributed Backtesting Exploration
 
-### Problem & Motivation
+## Problem & Motivation
 
 This project is an exploration into building a distributed backtesting system that could be run across multiple computers.
 Backtesting strategies across thousands of stocks is embarrassingly parallel, but also CPU-intensive (building indicators, linear regressions, etc.). 
@@ -8,7 +8,7 @@ The idea of this system is to distribute that work across N machines with resour
 
 It was inspired by how rendering farms distribute out work, which I have set up myself through SideFX Houdini and Blender with Flamenco, as well as being an early(ish) validator on the RNDR Network. 
 
-### Design Decisions
+## Design Decisions
 
 I chose to use OS threads for tasks because backtesting is CPU-bound. 
 Running backtesting processes on Tokio threads would block executor threads and starve I/O. 
@@ -22,24 +22,24 @@ The server will prune workers that haven't checked in within 10 seconds, making 
 The system is based on polling, rather than streaming, to reduce initial complexity when building it out. 
 This works for a small system like this, but would waste time eventually on a large scale operation, where streaming would be more appropriate.
 
-### Protocol
+## Protocol
 
-#### RequestJobs 
+### RequestJobs 
 
 RequestJobs is the RPC that gets called by a worker when it comes online. 
 It sends its number of available cores to the server, and waits for a response of JobsReply, which has a job id and a file as bytes to process.
 
-#### SendStatus
+### SendStatus
 
 SendStatus is an RPC that tells the server if the worker is running on its job. 
 This allows us to keep track of who is busy vs who can take new work.
 
-#### CompleteJob
+### CompleteJob
 
 CompleteJob is the RPC called when a worker finishes its work. It sends the id of the job, and the processed data back to the server.
 
 
-### Architecture 
+## Architecture 
 
   ```
   ┌─────────────────────────────────────────┐
@@ -67,7 +67,7 @@ CompleteJob is the RPC called when a worker finishes its work. It sends the id o
 
 
 
-### How to run
+## How to run
 
 To run a server: 
 ```cargo r --release --bin server```
@@ -77,7 +77,7 @@ To run a worker on your local computer:
 ```cargo r --release --bin worker```
 
 
-### Limitations / Known Issues
+## Limitations / Known Issues
 
 This project is mostly an exploration, not a truly robust production system. 
 There are a few obvious things that disqualify this project as "production-ready":
