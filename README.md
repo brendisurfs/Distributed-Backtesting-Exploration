@@ -41,6 +41,7 @@ CompleteJob is the RPC called when a worker finishes its work. It sends the id o
 
 ### Architecture 
 
+  ```
   ┌─────────────────────────────────────────┐
   │              Server (Dispatcher)        │
   │                                         │
@@ -62,6 +63,7 @@ CompleteJob is the RPC called when a worker finishes its work. It sends the id o
   │ │ CPU-bound backtest  │ │
   │ └─────────────────────┘ │
   └─────────────────────────┘
+  ```
 
 
 
