@@ -18,7 +18,7 @@ flume = { version = "0.11.0", features = ["async"] }
 num_cpus = "1.16.0"
 prost = "0.13.1"
 time = { version = "0.3.36", features = ["macros", "parsing", "serde"] }
-tokio = { version = "1.39.3", features = ["full"] }
+tokio = { version = "1.43.1", features = ["full"] }
 tokio-stream = { version = "0.1.15", features = ["sync"] }
 tonic = { version = "0.12.2", features = ["codegen", "gzip"] }
 tracing = "0.1.40"
